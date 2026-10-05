@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fall Risk: Posttest Probability Calculator</title>
+<style>
+  /* ── Design tokens ───────────────────────────────────────────────── */
+  :root {
+    /* Surfaces */
+    --bg-page:   #f0f4f8;
+    --bg-card:   #ffffff;
+    --bg-subtle: #e8eef4;
+    --bg-header: #1a2733;
+
+    /* Text */
+    --text-primary:   #1a2733;   /* 14.1:1 on white */
+    --text-secondary: #3d5166;   /* 7.2:1 on white  */
+    --text-muted:     #5a6f82;   /* 4.6:1 on white — only at 14px+ */
+    --text-on-dark:   #e8eef4;   /* on --bg-header  */
+    --text-dim-dark:  #9bb5c8;   /* secondary on --bg-header */
+
+    /* Borders */
+    --border:        #c8d5e0;
+    --border-strong: #a0b4c4;
+
+    /* Brand accent (teal) — AA-safe versions */
+    --teal:       #0e7a72;   /* on white: 4.8:1 */
+    --teal-dark:  #085850;   /* on white: 7.5:1 — for small text */
+    --teal-bg:    #d4efed;   /* background tint */
+    --teal-border:#7fc5bf;
+
+    /* Amber (positive/risk) — AA-safe */
+    --amber:       #8a5100;   /* on amber-bg: 8.1:1 */
+    --amber-dark:  #6b3d00;
+    --amber-bg:    #fdf0d9;
+    --amber-border:#d4922a;
+
+    /* Red (high risk) */
+    --red:         #9b2318;   /* on red-bg: 7.8:1 */
+    --red-dark:    #7a1a11;
+    --red-bg:      #fce9e7;
+    --red-border:  #d05040;
+
+    /* Results panel (dark slate) */
+    --panel:       #1a2733;
+    --panel-2:     #243446;
+    --panel-text:  #e8eef4;
+    --panel-muted: #9bb5c8;   /* 4.8:1 on panel */
+    --panel-dim:   #6e8fa6;   /* borders, chains */
+
+    /* Typography */
+    --font: "anthropic-sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "anthropic-mono", ui-monospace, "SF Mono", "Fira Code", monospace;
+
+    --radius-sm: 6px;
+    --radius:    10px;
+    --radius-lg: 14px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-page:   #0f1d28;
+      --bg-card:   #162230;
+      --bg-subtle: #1c2d3c;
+      --bg-header: #0b1520;
+
+      --text-primary:   #d8e6f0;
+      --text-secondary: #97b4c8;
+      --text-muted:     #7a9db5;
+      --text-on-dark:   #d0e2ef;
+      --text-dim-dark:  #7a9db5;
+
+      --border:        #2a3f52;
+      --border-strong: #3a5568;
+
+      --teal:       #3abfb5;
+      --teal-dark:  #5ed0c8;
+      --teal-bg:    #0c2e2c;
+      --teal-border:#2a8a84;
+
+      --amber:       #f0b442;
+      --amber-dark:  #f8cc6a;
+      --amber-bg:    #2a1e08;
+      --amber-border:#9a6f1a;
+
+      --red:         #e86456;
+      --red-dark:    #f08070;
+      --red-bg:      #2d0f0c;
+      --red-border:  #9a3528;
+
+      --panel:       #0b1520;
+      --panel-2:     #162230;
+      --panel-text:  #d0e2ef;
+      --panel-muted: #8eb0c8;
+      --panel-dim:   #3a5568;
+    }
+  }
+
+  /* ── Reset ───────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  /* ── Header ──────────────────────────────────────────────────────── */
+  header { background: var(--bg-header); }
+
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 24px 20px;
+  }
+
+  .header-byline {
+    font-size: 13px;
+    color: var(--text-on-dark);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .header-byline strong {
+    color: #ffffff;
+  }
+
+  .disclaimer-banner {
+    background: #2a2000;
+    border-top: 1px solid #5a4500;
+    border-bottom: 1px solid #5a4500;
+    padding: 11px 24px;
+  }
+
+  .disclaimer-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 12.5px;
+    color: #d4b86a;
+    line-height: 1.6;
+  }
+
+  .disclaimer-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .disclaimer-inner strong {
+    color: #f0cc70;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .disclaimer-banner {
+      background: #1e1600;
+      border-color: #3d2e00;
+    }
+  }
+
+  .header-refs {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 14px;
+  }
+
+  .header-ref-row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .ref-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .ref-cite {
+    color: var(--panel-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .ref-cite em {
+    font-style: italic;
+    color: var(--text-on-dark);
+  }
+
+  h1 {
+    font-size: clamp(20px, 3.5vw, 28px);
+    font-weight: 600;
+    color: var(--text-on-dark);  /* e8eef4 — high contrast on header */
+    line-height: 1.25;
+    margin-bottom: 8px;
+  }
+
+  .header-sub {
+    font-size: 14px;
+    color: var(--panel-muted);   /* 4.8:1 on header bg */
+    max-width: 580px;
+    line-height: 1.5;
+  }
+
+  .pretest-banner {
+    background: var(--teal);
+    color: #fff;
+    padding: 9px 24px;
+    font-size: 13.5px;
+    font-weight: 500;
+    text-align: center;
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: 0 0 8px 8px;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────────── */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    display: grid;
+    gap: 20px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 270px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .results { position: static !important; }
+  }
+
+  /* ── Section cards ───────────────────────────────────────────────── */
+  .section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .section-header {
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-icon { font-size: 17px; flex-shrink: 0; }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);   /* 7.2:1 on subtle bg */
+  }
+
+  .section-subtitle {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-left: auto;
+    text-align: right;
+  }
+
+  /* ── Info note ───────────────────────────────────────────────────── */
+  .info-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--teal-bg);
+    padding: 9px 14px;
+    border-radius: var(--radius-sm);
+    margin: 12px 18px 8px;
+    border-left: 3px solid var(--teal);
+    line-height: 1.5;
+  }
+
+  /* ── Test items ──────────────────────────────────────────────────── */
+  .items { padding: 4px 0; }
+
+  .item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    padding: 13px 18px;
+    gap: 14px;
+    border-bottom: 1px solid var(--bg-subtle);
+    transition: background 0.1s;
+  }
+  .item:last-child { border-bottom: none; }
+  .item:hover { background: var(--bg-subtle); }
+
+  .item-name {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-primary);   /* 14.1:1 on card */
+    margin-bottom: 3px;
+  }
+
+  .item-detail {
+    font-size: 13px;
+    color: var(--text-secondary); /* 7.2:1 on card — passes AA */
+    line-height: 1.4;
+  }
+
+  .item-evidence {
+    font-size: 12.5px;
+    color: var(--teal-dark);      /* 7.5:1 on card */
+    margin-top: 3px;
+  }
+
+  /* ── PoTP badges ─────────────────────────────────────────────────── */
+  .item-potp {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    min-width: 120px;
+  }
+
+  .potp-badge {
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: var(--mono);
+    padding: 4px 9px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+
+  /* Amber badge: dark text on light bg — both 8:1+ */
+  .badge-pos {
+    background: var(--amber-bg);
+    color: var(--amber);          /* #8a5100 on #fdf0d9 = 8.1:1 */
+    border: 1px solid var(--amber-border);
+  }
+
+  /* Teal badge: dark text on light bg — 7.5:1+ */
+  .badge-neg {
+    background: var(--teal-bg);
+    color: var(--teal-dark);      /* #085850 on #d4efed = 7.5:1 */
+    border: 1px solid var(--teal-border);
+  }
+
+  /* ── Toggle buttons ──────────────────────────────────────────────── */
+  .toggle-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+  .toggle-btn {
+    font-size: 12.5px;
+    font-family: var(--font);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg-card);
+    color: var(--text-secondary);  /* 7.2:1 on card */
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .toggle-btn:hover {
+    border-color: var(--teal);
+    color: var(--teal-dark);
+  }
+
+  .toggle-btn.active-pos {
+    background: var(--amber);
+    border-color: var(--amber-dark);
+    color: #fff;                   /* white on amber-dark bg */
+    font-weight: 600;
+  }
+
+  .toggle-btn.active-neg {
+    background: var(--teal);
+    border-color: var(--teal-dark);
+    color: #fff;                   /* white on teal bg */
+    font-weight: 600;
+  }
+
+  /* ── Results panel ───────────────────────────────────────────────── */
+  .results { position: sticky; top: 14px; }
+
+  .results-card {
+    background: var(--panel);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .results-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--panel-dim);
+  }
+
+  .results-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--panel-muted);   /* 4.8:1 on panel */
+    margin-bottom: 6px;
+  }
+
+  .prob-display {
+    font-size: 52px;
+    font-weight: 700;
+    font-family: var(--mono);
+    line-height: 1;
+    transition: color 0.3s;
+  }
+  .prob-display.risk-low  { color: var(--teal); }
+  .prob-display.risk-mod  { color: var(--amber-dark); }  /* #6b3d00 — legible on dark panel */
+  .prob-display.risk-high { color: var(--red); }
+
+  .risk-label {
+    font-size: 12.5px;
+    margin-top: 5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .risk-label.risk-low  { color: var(--teal); }
+  .risk-label.risk-mod  { color: var(--amber-dark); }
+  .risk-label.risk-high { color: var(--red); }
+
+  /* ── Meter ───────────────────────────────────────────────────────── */
+  .results-body { padding: 14px 18px; }
+
+  .meter-wrap { margin-bottom: 16px; }
+
+  .meter-track {
+    height: 9px;
+    background: var(--panel-2);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 5px;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+  }
+
+  .meter-marks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--panel-muted);    /* 4.8:1 on panel */
+    font-family: var(--mono);
+  }
+
+  /* ── Chain & selections ──────────────────────────────────────────── */
+  .selected-list {
+    font-size: 13px;
+    color: var(--panel-muted);
+    min-height: 44px;
+  }
+
+  .sel-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--panel-dim);
+    gap: 8px;
+  }
+  .sel-item:last-child { border-bottom: none; }
+
+  .sel-name { color: var(--panel-text); font-size: 13px; }
+  .sel-val  {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--panel-muted);
+    white-space: nowrap;
+  }
+
+  .chain-display {
+    font-size: 12px;
+    color: var(--panel-muted);
+    margin-top: 10px;
+    font-family: var(--mono);
+    word-break: break-all;
+    line-height: 1.9;
+  }
+
+  /* ── High-risk callout ───────────────────────────────────────────── */
+  .highrisk-callout {
+    margin-top: 12px;
+    background: rgba(155, 35, 24, 0.18);
+    border: 1px solid var(--red-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: var(--red);
+    line-height: 1.55;
+  }
+  /* In dark mode, red text on dark panel needs lightening */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .highrisk-callout {
+      color: var(--red-dark);   /* #f08070 — sufficient on dark bg */
+    }
+  }
+
+  /* ── Reset button ────────────────────────────────────────────────── */
+  .reset-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 9px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--panel-dim);
+    background: transparent;
+    color: var(--panel-muted);
+    font-family: var(--font);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .reset-btn:hover {
+    background: var(--panel-2);
+    color: var(--panel-text);
+    border-color: var(--panel-muted);
+  }
+
+  /* ── Citation ────────────────────────────────────────────────────── */
+  .citation {
+    font-size: 11.5px;
+    color: var(--panel-muted);
+    padding: 10px 18px 14px;
+    border-top: 1px solid var(--panel-dim);
+    line-height: 1.6;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 18px 0 10px;
+    color: var(--panel-muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── Next-step callout box ───────────────────────────────────────── */
+  .next-step-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 16px;
+  }
+
+  .next-step-header {
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .next-step-icon { font-size: 17px; flex-shrink: 0; }
+
+  .next-step-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .next-step-body {
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .next-step-body p { color: var(--text-primary); }
+
+  .next-step-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  @media (max-width: 560px) {
+    .next-step-tools { grid-template-columns: 1fr; }
+  }
+
+  .next-step-tool {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+  }
+
+  .tool-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+  }
+
+  .tool-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .next-step-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--amber-bg);
+    border-left: 3px solid var(--amber-border);
+    padding: 9px 12px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-byline">
+      Developed by <strong>Kenneth L. Miller, PT, DPT, PhD, FNAP</strong><br>
+      Associate Professor &amp; Geriatric PT Residency Program Director, MUSC College of Health Professions<br>
+      <span style="color:#9bb5c8;font-size:12px;">October 4, 2026</span>
+    </div>
+    <div class="header-refs">
+      <div class="header-ref-row">
+        <span class="ref-label">Screening data</span>
+        <span class="ref-cite">Lusardi MM, Fritz S, Middleton A, et al. Determining risk of falls in community dwelling older adults: a systematic review and meta-analysis using posttest probability. <em>J Geriatr Phys Ther.</em> 2017;40(1):1–36.</span>
+      </div>
+      <div class="header-ref-row">
+        <span class="ref-label">CPG guidance</span>
+        <span class="ref-cite">Kirk-Sanchez N, McDonough C, Avin K, Blackwood J, Hanke T. Physical therapy management of fall risk in community-dwelling older adults: an evidence-based clinical practice guideline from APTA Geriatrics. <em>J Geriatr Phys Ther.</em> 2025;48(2):62–87.</span>
+      </div>
+    </div>
+    <h1>Fall Risk — Posttest Probability</h1>
+    <p class="header-sub">Select test results below to calculate cumulative posttest probability of future falls for community-dwelling older adults aged &ge; 65.</p>
+  </div>
+  <div class="pretest-banner">
+    Baseline pretest probability = <strong>30%</strong> &nbsp;(community-dwelling older adults &ge; 65 years)
+  </div>
+  <div class="disclaimer-banner">
+    <div class="disclaimer-inner">
+      <span class="disclaimer-icon">⚠</span>
+      <span><strong>Clinical Disclaimer:</strong> This calculator is intended as an educational and clinical decision-support tool for use by licensed physical therapists and other qualified healthcare professionals. It does not replace clinical judgment, a comprehensive patient examination, or individualized professional assessment. Posttest probability estimates are derived from population-level likelihood ratio data and should be interpreted in the context of each patient's unique presentation. This tool is not intended for use by patients or the general public for self-assessment. The developer assumes no liability for clinical decisions made on the basis of this calculator. This calculator has not been reviewed or endorsed by the Medical University of South Carolina (MUSC).</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-icon">📋</span>
+          <span class="section-title">Medical History Questions</span>
+          <span class="section-subtitle">Yes / No / Not asked</span>
+        </div>
+        <div class="items" id="history-items"></div>
+      </div>
+
+      <div class="section" style="margin-top:16px;">
+        <div class="section-header">
+          <span class="section-icon">📝</span>
+          <span class="section-title">Self-Report Measures</span>
+          <span class="section-subtitle">Positive / Negative / Not done</span>
+        </div>
+        <div class="info-note">Positive = score at or beyond the risk threshold</div>
+        <div class="items" id="selfreport-items"></div>
+      </div>
+
+      <div class="section" style="margin-top:16px;">
+        <div class="section-header">
+          <span class="section-icon">🏃</span>
+          <span class="section-title">Performance-Based Measures</span>
+          <span class="section-subtitle">Positive / Negative / Not done</span>
+        </div>
+        <div class="info-note">Positive = score/time at or beyond the cut point (direction noted per measure)</div>
+        <div class="items" id="performance-items"></div>
+      </div>
+
+      <!-- MiniBESTest next-step callout -->
+      <div class="next-step-box">
+        <div class="next-step-header">
+          <span class="next-step-icon">🔬</span>
+          <span class="next-step-title">Next Step: In-Depth Examination</span>
+        </div>
+        <div class="next-step-body">
+          <p>When screening identifies elevated fall risk, the <strong>2025 APTA Geriatrics CPG</strong> recommends a comprehensive PT examination to identify <em>which</em> balance subdomains are impaired — guiding individualized intervention selection.</p>
+          <div class="next-step-tools">
+            <div class="next-step-tool">
+              <div class="tool-name">Mini-BESTest</div>
+              <div class="tool-desc">14-item balance evaluation across anticipatory, reactive, sensory orientation, and dynamic gait domains. Age-standardized cut-offs now available (Magnani et al., 2024). Identifies which subdomain is driving impairment.</div>
+            </div>
+            <div class="next-step-tool">
+              <div class="tool-name">BESTest (full)</div>
+              <div class="tool-desc">36-item comprehensive balance evaluation across 6 subdomains. More detailed than Mini-BESTest; useful for complex presentations. Both tools go beyond fall risk screening to guide treatment selection.</div>
+            </div>
+          </div>
+          <p class="next-step-note">⚠ Neither the Mini-BESTest nor the BESTest has published +LR/−LR values sufficient for inclusion in the Bayesian PoTP chain. They are examination tools, not screening tools, and cannot be added to this calculator.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Results -->
+    <div class="results">
+      <div class="results-card">
+        <div class="results-header">
+          <div class="results-label">Cumulative Posttest Probability</div>
+          <div class="prob-display risk-low" id="prob-val">30%</div>
+          <div class="risk-label risk-low" id="risk-label">Baseline — no tests selected</div>
+        </div>
+        <div class="results-body">
+          <div class="meter-wrap">
+            <div class="meter-track">
+              <div class="meter-fill" id="meter" style="width:30%;background:var(--teal);"></div>
+            </div>
+            <div class="meter-marks">
+              <span>0%</span><span>30%</span><span>50%</span><span>75%</span><span>100%</span>
+            </div>
+          </div>
+          <div class="selected-list" id="selected-list">
+            <div class="empty-state">No tests selected yet.<br>Select results on the left.</div>
+          </div>
+          <div class="chain-display" id="chain-display"></div>
+          <div class="highrisk-callout" id="highrisk-callout" style="display:none;"></div>
+          <button class="reset-btn" onclick="resetAll()">↺ Reset all selections</button>
+        </div>
+        <div class="citation">
+          Lusardi MM, et al. J Geriatr Phys Ther. 2017;40(1):1-36.<br>
+          doi: 10.1519/JPT.0000000000000099<br><br>
+          Cut scores updated per:<br>
+          Kirk-Sanchez N, et al. J Geriatr Phys Ther. 2025;48(2):62-87.<br>
+          doi: 10.1519/JPT.0000000000000454
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const HISTORY = [
+  { id:'h1', name:'Previous fall(s)',           detail:'Any self-reported fall in the past 6–12 months', posPoTP:44, negPoTP:26, posLR:1.8, negLR:0.8, evidence:'Level I–III, n = 7,401' },
+  { id:'h2', name:'Psychoactive medication use', detail:'Any sedatives, antidepressants, antipsychotics, or anxiolytics', posPoTP:38, negPoTP:26, posLR:1.4, negLR:0.9, evidence:'Level I–III, n = 12,217' },
+  { id:'h3', name:'Requires ADL assistance',     detail:'Dependence in any activity of daily living', posPoTP:38, negPoTP:26, posLR:1.4, negLR:0.8, evidence:'Level I–III, n = 2,539' },
+  { id:'h4', name:'Fear of falling',             detail:'Self-reported fear of falling (yes/no)', posPoTP:38, negPoTP:28, posLR:1.4, negLR:0.9, evidence:'Level I–III, n = 1,477' },
+  { id:'h5', name:'Ambulatory assistive device', detail:'Cane, walker, or other ambulatory aid', posPoTP:36, negPoTP:26, posLR:1.3, negLR:0.9, evidence:'Level I–III, n = 3,297' },
+  { id:'h6', name:'Difficulty with transfers',   detail:'Self-reported difficulty transferring (bed/chair/toilet)', posPoTP:78, negPoTP:28, posLR:8.5, negLR:0.9, evidence:'Level I, n = 192 (Coll-Planas 2007)' },
+  { id:'h7', name:'Difficulty with stairs',      detail:'Self-reported difficulty climbing or descending stairs', posPoTP:69, negPoTP:26, posLR:5.1, negLR:0.8, evidence:'Level I, n = 192 (Coll-Planas 2007)' },
+  { id:'h8', name:'Difficulty walking',          detail:'Self-reported difficulty walking or missteps', posPoTP:41, negPoTP:26, posLR:1.6, negLR:0.8, evidence:'Level I–III, n = 617' },
+  { id:'h9', name:'Urinary urgency / nocturia',  detail:'Urinary urgency, incontinence, or ≥2 nocturia episodes', posPoTP:34, negPoTP:26, posLR:1.2, negLR:0.9, evidence:'Level I–III, n = 8,338' },
+  { id:'h10',name:'Polypharmacy (≥4 medications)',detail:'4 or more total medications of any kind', posPoTP:32, negPoTP:28, posLR:1.1, negLR:0.9, evidence:'Level I–III, n = 5,668' },
+];
+
+const SELFREPORT = [
+  { id:'s1', name:'Falls Efficacy Scale–Int\'l (FES-I)', detail:'Score > 24 = positive (higher concern about falling)', posPoTP:42, negPoTP:20, posLR:1.7, negLR:0.6, evidence:'Level I–II, n = 760 · 2025 APTA CPG' },
+  { id:'s2', name:'Geriatric Depression Scale–15 (GDS-15)', detail:'Score > 6 = positive (depression likely)', posPoTP:45, negPoTP:28, posLR:1.9, negLR:0.9, evidence:'Level I–II, n = 1,002 · 2025 APTA CPG' },
+  { id:'s3', name:'Activity-Specific Balance Confidence (ABC)', detail:'Score < 67% = positive (low balance confidence)', posPoTP:55, negPoTP:23, posLR:2.9, negLR:0.7, evidence:'Level III, n = 115' },
+];
+
+const PERFORMANCE = [
+  { id:'p1', name:'Berg Balance Scale (BBS)',       detail:'Positive: score < 50 points (≤ 49)', posPoTP:59, negPoTP:23, posLR:3.4, negLR:0.7, evidence:'Level I–III, n = 1,130 · 2025 APTA CPG' },
+  { id:'p2', name:'Timed Up & Go (TUG)',            detail:'Positive: time > 11 seconds', posPoTP:47, negPoTP:25, posLR:2.1, negLR:0.8, evidence:'Level I–III, n = 6,410 · 2025 APTA CPG' },
+  { id:'p3', name:'5× Sit-to-Stand (5TSTS)',        detail:'Positive: time > 12 seconds', posPoTP:41, negPoTP:20, posLR:1.6, negLR:0.7, evidence:'Level I–II, n = 3,319 · 2025 APTA CPG' },
+  { id:'p4', name:'Single-Limb Stance (SLS)',       detail:'Positive: cannot hold eyes-open SLS ≥ 6.5 seconds', posPoTP:45, negPoTP:28, posLR:1.9, negLR:0.9, evidence:'Level I–III, n = 3,015 · 2025 APTA CPG' },
+  { id:'p5', name:'Self-Selected Walking Speed',    detail:'Positive: speed < 1.0 m/s', posPoTP:39, negPoTP:20, posLR:1.5, negLR:0.6, evidence:'Level I–III, n = 1,354 · 2025 APTA CPG' },
+  { id:'p6', name:'POMA / Tinetti',                detail:'Positive: score < 25 (balance + gait subscales)', posPoTP:42, negPoTP:23, posLR:1.7, negLR:0.7, evidence:'Level I–III, n = 1,574' },
+  { id:'p7', name:'Functional Reach (FR)',           detail:'Positive: reach < 22 cm (< 8.7 in)', posPoTP:77, negPoTP:17, posLR:7.9, negLR:0.5, evidence:'Level I–III, n = 274 (wide CIs — use with caution)' },
+  { id:'p8', name:'Dynamic Gait Index (DGI)',       detail:'Positive: score ≤ 19 (excluding outlier study)', posPoTP:63, negPoTP:20, posLR:4.0, negLR:0.6, evidence:'Level I–III, n = 186 (limited evidence)' },
+];
+
+const state = {};
+[...HISTORY, ...SELFREPORT, ...PERFORMANCE].forEach(t => { state[t.id] = null; });
+
+function calcPoTP() {
+  let prob = 0.30;
+  const chain = [];
+  [...HISTORY, ...SELFREPORT, ...PERFORMANCE].forEach(test => {
+    const s = state[test.id];
+    if (!s) return;
+    const lr = s === 'pos' ? test.posLR : test.negLR;
+    const odds = (prob / (1 - prob)) * lr;
+    prob = odds / (1 + odds);
+    chain.push({ name: test.name, lr, s, prob });
+  });
+  return { prob, chain };
+}
+
+function updateResults() {
+  const { prob, chain } = calcPoTP();
+  const pctVal = Math.round(prob * 100);
+  const posCount = chain.filter(c => c.s === 'pos').length;
+
+  let cls = 'risk-low', label = 'Baseline — no tests selected';
+  if (chain.length > 0) {
+    if (pctVal >= 50)       { cls = 'risk-high'; label = 'Likely high risk'; }
+    else if (pctVal > 30)   { cls = 'risk-mod';  label = 'Likely moderate risk'; }
+    else if (pctVal <= 25)  { cls = 'risk-low';  label = 'Likely low risk'; }
+    else                    { cls = 'risk-low';  label = 'Near baseline risk'; }
+  }
+
+  document.getElementById('prob-val').textContent = pctVal + '%';
+  document.getElementById('prob-val').className = 'prob-display ' + cls;
+  document.getElementById('risk-label').textContent = label;
+  document.getElementById('risk-label').className = 'risk-label ' + cls;
+
+  const fill = document.getElementById('meter');
+  fill.style.width = Math.min(pctVal, 100) + '%';
+  fill.style.background = cls === 'risk-high' ? 'var(--red)' : cls === 'risk-mod' ? 'var(--amber-border)' : 'var(--teal)';
+
+  const calloutEl = document.getElementById('highrisk-callout');
+  if (posCount >= 2 || pctVal >= 50) {
+    calloutEl.style.display = 'block';
+    calloutEl.innerHTML = '<strong>Full PT examination indicated</strong><br>≥2 positive findings — per the 2025 APTA Geriatrics CPG, comprehensive examination is recommended to identify balance subdomains driving risk (e.g., Mini-BESTest) and guide individualized intervention.';
+  } else {
+    calloutEl.style.display = 'none';
+  }
+
+  const listEl = document.getElementById('selected-list');
+  const chainEl = document.getElementById('chain-display');
+
+  if (chain.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">No tests selected yet.<br>Select results on the left.</div>';
+    chainEl.innerHTML = '';
+    return;
+  }
+
+  let listHtml = '';
+  let chainText = '30%';
+  chain.forEach(c => {
+    const dir = c.s === 'pos' ? '▲' : '▼';
+    const col = c.s === 'pos' ? 'var(--amber-dark)' : 'var(--teal)';
+    listHtml += `<div class="sel-item">
+      <span class="sel-name" style="color:${col}">${dir} ${c.name}</span>
+      <span class="sel-val">${Math.round(c.prob*100)}%</span>
+    </div>`;
+    chainText += ` → ${Math.round(c.prob*100)}%`;
+  });
+
+  listEl.innerHTML = listHtml;
+  chainEl.innerHTML = `<span>Chain: ${chainText}</span>`;
+}
+
+function toggle(id, type) {
+  state[id] = (state[id] === type) ? null : type;
+  document.getElementById('btn-pos-' + id).className = 'toggle-btn' + (state[id] === 'pos' ? ' active-pos' : '');
+  document.getElementById('btn-neg-' + id).className = 'toggle-btn' + (state[id] === 'neg' ? ' active-neg' : '');
+  updateResults();
+}
+
+function resetAll() {
+  Object.keys(state).forEach(k => { state[k] = null; });
+  document.querySelectorAll('.toggle-btn').forEach(btn => { btn.className = 'toggle-btn'; });
+  updateResults();
+}
+
+function buildItems(tests, containerId) {
+  const container = document.getElementById(containerId);
+  tests.forEach(test => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div>
+        <div class="item-name">${test.name}</div>
+        <div class="item-detail">${test.detail}</div>
+        <div class="item-evidence">${test.evidence}</div>
+      </div>
+      <div class="item-potp">
+        <div class="potp-badge badge-pos">+ → ${test.posPoTP}%</div>
+        <div class="potp-badge badge-neg">− → ${test.negPoTP}%</div>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="btn-pos-${test.id}" onclick="event.stopPropagation();toggle('${test.id}','pos')">Positive</button>
+          <button class="toggle-btn" id="btn-neg-${test.id}" onclick="event.stopPropagation();toggle('${test.id}','neg')">Negative</button>
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+buildItems(HISTORY, 'history-items');
+buildItems(SELFREPORT, 'selfreport-items');
+buildItems(PERFORMANCE, 'performance-items');
+updateResults();
+</script>
+</body>
+</html>
